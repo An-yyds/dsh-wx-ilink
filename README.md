@@ -185,6 +185,9 @@ npm test
 - 回复是整轮完成后的最终文本，没有流式逐字输出
 - 单机器人/单微信账号
 
+## 说明
+做这个插件源于微信 ClawBot 插件，想着在手机端可以发消息给电脑端的DSH，帮助我处理一些文件什么的。本插件全程使用DSH的创造模式开发，我只协调测试和审查，确实提高了开发的速度。同时开发这个插件也是开到了一个wx的文章，该作者很强大也是开发了一个这样的插件，还支持群聊功能，大家可以去支持https://github.com/agi-redtea/dsh-weixin-web。我在此加了一个人设的配置，用户可以自由配置人设，这样感觉更好。后续也会继续开发，继续完善这个插件，后续可以补充发送表情什么的。
+
 ## License
 
 MIT。二维码库 [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) 也是 MIT，版权归其作者。

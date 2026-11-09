@@ -62,6 +62,18 @@ dsh plugin --profile web add /absolute/path/to/dsh-wx-ilink
 
 也可以使用兜底页面：启动日志里的 `http://127.0.0.1:3080/weixin?token=...`。
 
+<img width="388" height="164" alt="image" src="https://github.com/user-attachments/assets/94d951dd-4fcc-473f-be29-3e1a328df1b8" />
+
+重启将会在页面顶部栏出现插件标识
+
+<img width="300" height="500" alt="image" src="https://github.com/user-attachments/assets/7e4c6f7b-68ac-40ea-a576-4966c698d391" />
+
+打开可以进行连接和查看状态
+
+<img width="300" height="550" alt="ffd929140d4fba5376e8f5f08d5d578c" src="https://github.com/user-attachments/assets/cecc5469-4040-4cac-a211-9d91686db0ca" />
+
+
+
 ## 命令
 
 | 命令 | 作用 |

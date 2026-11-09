@@ -1,0 +1,71 @@
+{
+  "name": "dsh-wx-ilink",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness 的微信 iLink 通道：扫码登录、独立会话、媒体收发、审批与提问转发、人设和原生 Web 面板。",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": {
+      "default": "./client.js"
+    },
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib",
+    "vendor/qrcode.mjs",
+    "vendor/qrcode-generator-README.md",
+    "vendor/README.md",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20.3.0",
+    "dsh": ">=0.2.1-rc.5 <0.3.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "wechat",
+    "weixin",
+    "ilink",
+    "chatbot"
+  ],
+  "author": "An-yyds",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/An-yyds/dsh-wx-ilink.git"
+  },
+  "homepage": "https://github.com/An-yyds/dsh-wx-ilink#readme",
+  "bugs": {
+    "url": "https://github.com/An-yyds/dsh-wx-ilink/issues"
+  }
+}

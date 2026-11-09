@@ -1,0 +1,7 @@
+# dsh-wx-ilink bundle：把本包插入 web profile。
+# 安装后如要覆盖默认配置，在 profile 的 cordis.patch.yml 中重述 id 为 weixin-ilink 的行
+#（name + 完整 config）。配置项见 README。
+- insert:
+    - id: weixin-ilink
+      name: dsh-wx-ilink
+      config: {}

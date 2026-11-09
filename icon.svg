@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="WeChat iLink">
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="#07C160"/>
+  <path d="M78 92c-18 0-32 12-32 28 0 9 5 17 13 22l-4 14 16-8c4 1 9 2 14 2 3 0 6 0 9-1-3-5-5-11-5-17 0-18 17-32 38-32 3 0 6 0 9 1-5-15-20-26-38-26-20 0-36 13-36 30 0 7 3 14 8 19l-3 9 11-5c4 2 9 3 14 3" fill="#fff" opacity=".92"/>
+  <path d="M190 122c-17 0-30 11-30 26 0 8 4 15 11 20l-3 12 13-6c3 1 7 1 10 1 17 0 30-11 30-26s-13-27-31-27z" fill="#fff"/>
+  <circle cx="179" cy="145" r="4" fill="#07C160"/>
+  <circle cx="197" cy="145" r="4" fill="#07C160"/>
+  <path d="M104 196h48" stroke="#fff" stroke-width="10" stroke-linecap="round" opacity=".55"/>
+  <circle cx="94" cy="196" r="7" fill="#fff" opacity=".55"/>
+  <circle cx="162" cy="196" r="7" fill="#fff" opacity=".55"/>
+</svg>

@@ -1,0 +1,11 @@
+node_modules/
+*.log
+.DS_Store
+.env
+.env.*
+coverage/
+.test-dist/
+dist/
+state.json
+plugin.log
+weixin-ilink/

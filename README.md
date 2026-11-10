@@ -1,5 +1,11 @@
 # dsh-wx-ilink
 
+[![npm](https://img.shields.io/npm/v/dsh-wx-ilink)](https://www.npmjs.com/package/dsh-wx-ilink)
+[![CI](https://github.com/An-yyds/dsh-wx-ilink/actions/workflows/ci.yml/badge.svg)](https://github.com/An-yyds/dsh-wx-ilink/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/dsh-wx-ilink)](LICENSE)
+
+当前版本：**0.1.1** · [更新记录](#版本更新) · [CHANGELOG](CHANGELOG.md)
+
 把 **个人微信** 接入 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的独立插件：手机微信扫码登录后，微信消息进入独立的 DSH 会话；Agent 处理完，把结果发回微信。
 
 > 仓库：<https://github.com/An-yyds/dsh-wx-ilink> · 这是一个第三方开源项目，不是腾讯官方产品。协议参考腾讯官方 [`@tencent-weixin/openclaw-weixin`](https://www.npmjs.com/package/@tencent-weixin/openclaw-weixin)（MIT）所描述的 iLink Bot 接口；代码为独立实现。使用前请确认你的微信账号具备 iLink 入口，并自行评估账号与合规风险。
@@ -34,16 +40,16 @@
 
 ## 安装
 
-### 从 npm 安装（发布后）
+### 从 npm 安装（推荐）
 
 ```bash
-dsh plugin --profile web add dsh-wx-ilink@0.1.0
+dsh plugin --profile web add dsh-wx-ilink@0.1.1
 ```
 
 ### 从 GitHub 安装
 
 ```bash
-dsh plugin --profile web add github:An-yyds/dsh-wx-ilink#v0.1.0
+dsh plugin --profile web add github:An-yyds/dsh-wx-ilink#v0.1.1
 ```
 
 ### 从本地目录安装
@@ -53,6 +59,8 @@ dsh plugin --profile web add /absolute/path/to/dsh-wx-ilink
 ```
 
 安装后**重启一次 DSH**（客户端入口在启动时扫描），然后硬刷新浏览器页面。
+
+> 想跟随最新版可以用 `dsh-wx-ilink@latest`；生产环境建议固定版本号，避免自动升级带来行为变化。
 
 ## 快速开始
 
@@ -255,6 +263,27 @@ npm test
 
 ## 说明
 做这个插件源于微信 ClawBot 插件，想着在手机端可以发消息给电脑端的DSH，帮助我处理一些文件什么的。本插件全程使用DSH的创造模式开发，我只协调测试和审查，确实提高了开发的速度。同时开发这个插件也是开到了一个wx的文章，该作者很强大也是开发了一个这样的插件，还支持群聊功能，大家可以去支持https://github.com/agi-redtea/dsh-weixin-web。我在此加了一个人设的配置，用户可以自由配置人设，这样感觉更好。后续也会继续开发，继续完善这个插件，后续可以补充发送表情什么的。
+
+## 版本更新
+
+完整记录见 [CHANGELOG.md](CHANGELOG.md)。
+
+| 版本 | 日期 | 主要内容 |
+|---|---|---|
+| [0.1.1](https://www.npmjs.com/package/dsh-wx-ilink/v/0.1.1) | 2026-11-10 | 群聊接入（`off`/`all`/`mention`）、关键错误主动告警、`index.js` 拆分为 13 个模块、测试增至 39 项 |
+| [0.1.0](https://www.npmjs.com/package/dsh-wx-ilink/v/0.1.0) | 2026-11-09 | 首个公开版本：扫码登录、长轮询、独立会话、媒体收发、审批与提问转发、人设、原生面板、白名单 |
+
+升级方式：
+
+```bash
+# 固定版本
+dsh plugin --profile web add dsh-wx-ilink@0.1.1
+
+# 或跟随最新
+dsh plugin --profile web add dsh-wx-ilink@latest
+```
+
+升级后重启一次 DSH。登录状态保存在 `$DSH_HOME/weixin-ilink/state.json`，不需要重新扫码。
 
 ## License
 

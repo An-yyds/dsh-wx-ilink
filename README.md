@@ -4,7 +4,7 @@
 [![CI](https://github.com/An-yyds/dsh-wx-ilink/actions/workflows/ci.yml/badge.svg)](https://github.com/An-yyds/dsh-wx-ilink/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/dsh-wx-ilink)](LICENSE)
 
-当前版本：**0.2.2** · [更新记录](#版本更新) · [CHANGELOG](CHANGELOG.md)
+当前版本：**0.2.3** · [更新记录](#版本更新) · [CHANGELOG](CHANGELOG.md)
 
 把 **个人微信** 接入 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的独立插件：手机微信扫码登录后，微信消息进入独立的 DSH 会话；Agent 处理完，把结果发回微信。
 
@@ -40,7 +40,7 @@
 - **Web 端**：右上角微信图标抽屉可直接扫码，也可用 `/weixin?token=...` 页面。
 - **桌面版**：同样有右上角入口；若界面不渲染工具返回的二维码图片，用 `weixin_login` 给出的 `qrPath` 打开 `login-qr.gif` 扫码。
 - 桌面版如果 `dsh` 不在 PATH，Windows 下可执行安装包自带的 CLI：
-  `"<DSH 安装目录>\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add dsh-wx-ilink@0.2.2`
+  `"<DSH 安装目录>\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add dsh-wx-ilink@0.2.3`
 
 不需要公网 IP，也不需要反向代理；iLink 是出站长连接 + 长轮询。
 
@@ -51,18 +51,18 @@
 **Web 端**（profile 通常是 `web`）：
 
 ```bash
-dsh plugin --profile web add dsh-wx-ilink@0.2.2
+dsh plugin --profile web add dsh-wx-ilink@0.2.3
 ```
 
 **桌面版**（profile 通常是 `desktop`）：
 
 ```bash
-dsh plugin --profile desktop add dsh-wx-ilink@0.2.2
+dsh plugin --profile desktop add dsh-wx-ilink@0.2.3
 ```
 
 > Windows 桌面版若提示 `dsh: command not found`，改用安装包自带 CLI：
 > ```powershell
-> & "D:\DSH\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add dsh-wx-ilink@0.2.2
+> & "D:\DSH\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add dsh-wx-ilink@0.2.3
 > ```
 > 不确定 profile 名时，先看 `~/.dsh/profiles/`（Windows 是 `%USERPROFILE%\.dsh\profiles\`）下的目录。
 
@@ -70,10 +70,10 @@ dsh plugin --profile desktop add dsh-wx-ilink@0.2.2
 
 ```bash
 # Web 端
-dsh plugin --profile web add github:An-yyds/dsh-wx-ilink#v0.2.2
+dsh plugin --profile web add github:An-yyds/dsh-wx-ilink#v0.2.3
 
 # 桌面版
-dsh plugin --profile desktop add github:An-yyds/dsh-wx-ilink#v0.2.2
+dsh plugin --profile desktop add github:An-yyds/dsh-wx-ilink#v0.2.3
 ```
 
 ### 从本地目录安装
@@ -314,6 +314,7 @@ npm test
 
 | 版本 | 日期 | 主要内容 |
 |---|---|---|
+| [0.2.3](https://www.npmjs.com/package/dsh-wx-ilink/v/0.2.3) | 2026-11-10 | 修复面板「重新登录」返回 HTTP 400；路由异常改为 500 并记录日志 |
 | [0.2.2](https://www.npmjs.com/package/dsh-wx-ilink/v/0.2.2) | 2026-11-10 | 内置「大鲸鱼」默认人设，安装即有角色；新增 `personaEnabled` 开关 |
 | [0.2.1](https://www.npmjs.com/package/dsh-wx-ilink/v/0.2.1) | 2026-11-10 | `weixin_login` 增加二维码文件兜底（`login-qr.gif`），适配不渲染图片的界面 |
 | [0.2.0](https://www.npmjs.com/package/dsh-wx-ilink/v/0.2.0) | 2026-11-10 | 跨端支持（`webServer` 变可选）、新增 `weixin_login` / `weixin_verify` / `weixin_status` / `weixin_logout` 控制工具、桌面端可用 |
@@ -324,7 +325,7 @@ npm test
 
 ```bash
 # 固定版本
-dsh plugin --profile web add dsh-wx-ilink@0.2.2
+dsh plugin --profile web add dsh-wx-ilink@0.2.3
 
 # 或跟随最新
 dsh plugin --profile web add dsh-wx-ilink@latest

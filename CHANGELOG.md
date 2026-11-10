@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.3 — 2026-11-10
+
+### 修复
+
+- 面板「重新登录 / 重新生成二维码」返回 HTTP 400：0.1.1 拆分模块时 `handleLogin` 仍调用已重命名的 `cancelAllApprovals` / `cancelAllQuestions`，异常被 HTTP 层转成 400。现已改为调用 `approvals.cancelAll()` / `questions.cancelAll()`。
+- 面板路由增加错误兜底：处理函数抛错时返回 500 并记录日志，不再静默变成 400。
+
+### 测试
+
+- 新增面板路由回归测试 5 项，总数 55 项。
+
 ## 0.2.2 — 2026-11-10
 
 ### 新增

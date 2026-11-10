@@ -4,7 +4,7 @@
 [![CI](https://github.com/An-yyds/dsh-wx-ilink/actions/workflows/ci.yml/badge.svg)](https://github.com/An-yyds/dsh-wx-ilink/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/dsh-wx-ilink)](LICENSE)
 
-当前版本：**0.1.1** · [更新记录](#版本更新) · [CHANGELOG](CHANGELOG.md)
+当前版本：**0.2.0** · [更新记录](#版本更新) · [CHANGELOG](CHANGELOG.md)
 
 把 **个人微信** 接入 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的独立插件：手机微信扫码登录后，微信消息进入独立的 DSH 会话；Agent 处理完，把结果发回微信。
 
@@ -26,6 +26,7 @@
 - 默认白名单：只允许扫码登录的本人微信号使用
 - 群聊接入：可选开启，一个群一个 DSH 会话，支持 `all` / 仅被 @ 两种模式
 - 关键错误告警：登录过期、收消息连续失败、回复发送失败、消息循环崩溃时主动推微信
+- 跨端：不依赖 `webServer`，桌面端等没有本地 HTTP 服务的宿主也能用工具完成登录与状态查看
 
 ## 要求
 
@@ -43,13 +44,13 @@
 ### 从 npm 安装（推荐）
 
 ```bash
-dsh plugin --profile web add dsh-wx-ilink@0.1.1
+dsh plugin --profile web add dsh-wx-ilink@0.2.0
 ```
 
 ### 从 GitHub 安装
 
 ```bash
-dsh plugin --profile web add github:An-yyds/dsh-wx-ilink#v0.1.1
+dsh plugin --profile web add github:An-yyds/dsh-wx-ilink#v0.2.0
 ```
 
 ### 从本地目录安装
@@ -173,6 +174,19 @@ dsh plugin --profile web add /absolute/path/to/dsh-wx-ilink
 - 多条审批按联系人排队，一次只问一条
 - `ask_user_question` 会逐题转发；回复编号或直接输入文字
 
+## 跨端（Web / 桌面端 / 终端）
+
+插件不强依赖任何 HTTP 服务：
+
+| 宿主 | 入口 |
+|---|---|
+| DSH Web | 右上角微信图标抽屉；或 `/weixin?token=...` 页面 |
+| 桌面端 / 终端等无 webServer 的宿主 | 让 Agent 调用工具：`weixin_login`（返回二维码图片）、`weixin_verify`、`weixin_status`、`weixin_logout` |
+
+典型用法：在桌面端的会话里输入“帮我登录微信”，Agent 调用 `weixin_login`，界面直接显示二维码图片；扫码后如需验证码，输入后让 Agent 调用 `weixin_verify`。
+
+工具在 Web 端同样可用，作为面板之外的备用入口。
+
 ## 群聊
 
 默认关闭。开启后，一个微信群对应一个 DSH 会话；回复发回群里。
@@ -270,6 +284,7 @@ npm test
 
 | 版本 | 日期 | 主要内容 |
 |---|---|---|
+| [0.2.0](https://www.npmjs.com/package/dsh-wx-ilink/v/0.2.0) | 2026-11-10 | 跨端支持（`webServer` 变可选）、新增 `weixin_login` / `weixin_verify` / `weixin_status` / `weixin_logout` 控制工具、桌面端可用 |
 | [0.1.1](https://www.npmjs.com/package/dsh-wx-ilink/v/0.1.1) | 2026-11-10 | 群聊接入（`off`/`all`/`mention`）、关键错误主动告警、`index.js` 拆分为 13 个模块、测试增至 39 项 |
 | [0.1.0](https://www.npmjs.com/package/dsh-wx-ilink/v/0.1.0) | 2026-11-09 | 首个公开版本：扫码登录、长轮询、独立会话、媒体收发、审批与提问转发、人设、原生面板、白名单 |
 
@@ -277,7 +292,7 @@ npm test
 
 ```bash
 # 固定版本
-dsh plugin --profile web add dsh-wx-ilink@0.1.1
+dsh plugin --profile web add dsh-wx-ilink@0.2.0
 
 # 或跟随最新
 dsh plugin --profile web add dsh-wx-ilink@latest

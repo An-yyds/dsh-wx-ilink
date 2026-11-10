@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.0 — 2026-11-10
+
+### 新增
+
+- 跨端支持：`webServer` 不再是硬依赖。宿主没有 HTTP 服务（例如桌面端）时，通道照常收发消息，只是跳过本地网页面板。
+- 四个控制工具，任何 DSH 界面都能用：
+  - `weixin_login`：生成登录二维码并以图片返回，手机扫码即可
+  - `weixin_verify`：提交手机上的数字验证码
+  - `weixin_status`：连接、会话、审批/提问、群聊与告警状态
+  - `weixin_logout`：退出登录
+
+### 变更
+
+- `inject` 从 `['agents','sessions','webServer','tools']` 改为 `['agents','sessions','tools']`；面板路由改用可选注入。
+- Web 端行为不变：有 `webServer` 时仍注册 `/weixin/*` 面板。
+
+### 测试
+
+- 新增控制工具测试 7 项，总数 46 项。
+
 ## 0.1.1 — 2026-11-10
 
 ### 新增

@@ -44,6 +44,7 @@ import {
   sleep,
 } from './lib/ilink.js';
 import { StateStore } from './lib/state.js';
+import { dataUrlBytes, qrDataUrl } from './lib/qr.js';
 import { LoginSession } from './lib/login.js';
 import { Panel } from './lib/panel.js';
 import { ApprovalCenter } from './lib/approval.js';
@@ -52,6 +53,7 @@ import { AttachmentPipeline } from './lib/attachments.js';
 import { TypingCenter } from './lib/typing.js';
 import { PeerRouter, isGroupKey } from './lib/peers.js';
 import { AlertCenter } from './lib/alerts.js';
+import { ControlTools } from './lib/control.js';
 import {
   HELP_TEXT,
   LOGIN_PAGE,
@@ -71,7 +73,7 @@ import {
 import { MediaTooLargeError } from './lib/media.js';
 
 export const name = 'dsh-wx-ilink';
-export const inject = ['agents', 'sessions', 'webServer', 'tools'];
+export const inject = ['agents', 'sessions', 'tools'];
 
 /** 连续收消息失败达到该次数就告警。 */
 const POLL_ALERT_AFTER = 3;
@@ -104,6 +106,7 @@ export class WeixinIlinkPlugin {
     this.typing = new TypingCenter(this);
     this.peers = new PeerRouter(this);
     this.alerts = new AlertCenter(this);
+    this.control = new ControlTools(this);
   }
 
   get agents() {
@@ -180,10 +183,12 @@ export class WeixinIlinkPlugin {
     this.state.adminToken = this.adminToken;
     this.store.save();
 
-    this.registerRoutes();
+    this.registerOptionalRoutes();
     this.registerSendTool();
+    this.registerControlTools();
     this.log('info', `状态目录：${this.stateDir}`);
-    this.log('info', `登录页：${this.pageUrl()}`);
+    if (this.pageUrl()) this.log('info', `登录页：${this.pageUrl()}`);
+    else this.log('info', '当前宿主没有 webServer，跳过本地网页面板；请用 weixin_login 等工具操作');
     if (this.config.groups.mode !== 'off') {
       this.log('info', `群聊已启用（mode=${this.config.groups.mode}，白名单 ${this.config.groups.allowedGroups.length || '不限'} 个）`);
     }
@@ -221,18 +226,33 @@ export class WeixinIlinkPlugin {
   }
 
   pageUrl() {
-    let origin = 'http://127.0.0.1:3080';
     try {
-      origin = this.ctx.webServer?.getOrigin?.() ?? origin;
+      const origin = this.ctx.get?.('webServer')?.getOrigin?.();
+      if (!origin) return '';
+      return `${origin}${LOGIN_PAGE}?token=${encodeURIComponent(this.adminToken)}`;
     } catch {
-      /* ignore */
+      return '';
     }
-    return `${origin}${LOGIN_PAGE}?token=${encodeURIComponent(this.adminToken)}`;
   }
 
-  registerRoutes() {
-    for (const route of this.panel.routes()) {
-      this.routes.push(this.ctx.webServer.register(route));
+  /**
+   * 本地网页面板只在宿主提供 webServer 时注册。
+   * 桌面端等没有 HTTP 服务的宿主会跳过，通道本身仍然工作。
+   */
+  registerOptionalRoutes() {
+    try {
+      this.ctx.inject(['webServer'], (webCtx) => {
+        try {
+          for (const route of this.panel.routes()) {
+            this.routes.push(webCtx.webServer.register(route));
+          }
+          this.log('info', '已注册本地网页面板路由');
+        } catch (error) {
+          this.log('warn', `注册网页面板路由失败：${error?.message ?? error}`);
+        }
+      });
+    } catch (error) {
+      this.log('warn', `当前宿主不支持 webServer 注入：${error?.message ?? error}`);
     }
   }
 
@@ -764,6 +784,14 @@ export class WeixinIlinkPlugin {
       });
     } catch (error) {
       this.log('warn', `注册 send_weixin_file 失败：${error?.message ?? error}`);
+    }
+  }
+
+  registerControlTools() {
+    try {
+      this.control.register();
+    } catch (error) {
+      this.log('warn', `注册微信控制工具失败：${error?.message ?? error}`);
     }
   }
 

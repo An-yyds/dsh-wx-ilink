@@ -336,7 +336,7 @@ window.__ModuleLoader__.load({
             key: 'text',
             value: persona,
             rows: 5,
-            placeholder: '例如：你叫大鲸鱼，性格温和幽默……',
+            placeholder: '留空则使用内置「大鲸鱼」人设；也可以写成你想要的角色和性格',
             onChange: function (event) { setPersona(event.target.value) },
             style: Object.assign({ marginTop: '8px', resize: 'vertical', minHeight: '90px' }, inputStyle)
           }),

@@ -4,7 +4,7 @@
 [![CI](https://github.com/An-yyds/dsh-wx-ilink/actions/workflows/ci.yml/badge.svg)](https://github.com/An-yyds/dsh-wx-ilink/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/dsh-wx-ilink)](LICENSE)
 
-当前版本：**0.2.1** · [更新记录](#版本更新) · [CHANGELOG](CHANGELOG.md)
+当前版本：**0.2.2** · [更新记录](#版本更新) · [CHANGELOG](CHANGELOG.md)
 
 把 **个人微信** 接入 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的独立插件：手机微信扫码登录后，微信消息进入独立的 DSH 会话；Agent 处理完，把结果发回微信。
 
@@ -19,7 +19,7 @@
 - Agent 可通过 `send_weixin_file` 把图片、视频或文件发回微信
 - 工具审批转发到微信：回复 `1` 允许一次、`2` 拒绝；多条审批排队
 - `ask_user_question` 的问题和选项转发到微信，支持多选与自由文本
-- 角色与性格：插件默认人设 + 每个联系人单独人设
+- 角色与性格：内置「大鲸鱼」默认人设，开箱即有；支持按联系人或群单独覆盖
 - 会话归入对应 DSH 工作区，标题为 `微信·xxxx`
 - 处理期间“正在输入”，长任务按间隔发进度提示
 - 原生 Web 面板：右上角微信图标（连接状态点）、扫码/验证码、联系人、人设编辑、重新登录/退出
@@ -44,13 +44,13 @@
 ### 从 npm 安装（推荐）
 
 ```bash
-dsh plugin --profile web add dsh-wx-ilink@0.2.1
+dsh plugin --profile web add dsh-wx-ilink@0.2.2
 ```
 
 ### 从 GitHub 安装
 
 ```bash
-dsh plugin --profile web add github:An-yyds/dsh-wx-ilink#v0.2.1
+dsh plugin --profile web add github:An-yyds/dsh-wx-ilink#v0.2.2
 ```
 
 ### 从本地目录安装
@@ -122,7 +122,8 @@ dsh plugin --profile web add /absolute/path/to/dsh-wx-ilink
 | `baseUrl` | `https://ilinkai.weixin.qq.com` | iLink 服务地址（仅测试时改） |
 | `provider` / `model` | 跟随 DSH 默认 | 微信会话使用的模型 |
 | `agentPreset` | 跟随 profile 默认 | 建议 `standard` 或 `cordis`，否则工具可能不全 |
-| `persona` | 空 | 默认角色/性格，作为系统提示注入 |
+| `persona` | 内置「大鲸鱼」 | 默认角色/性格，作为系统提示注入；显式配置会覆盖内置值 |
+| `personaEnabled` | `true` | 设为 `false` 关闭内置人设，回到中性助手语气 |
 | `approvalPolicy` | `ask` | `ask` 转发审批；`never` 直接拒绝 |
 | `forwardApprovals` | `true` | 关闭后等同 `never` |
 | `forwardQuestions` | `true` | 把 `ask_user_question` 转发到微信 |
@@ -284,6 +285,7 @@ npm test
 
 | 版本 | 日期 | 主要内容 |
 |---|---|---|
+| [0.2.2](https://www.npmjs.com/package/dsh-wx-ilink/v/0.2.2) | 2026-11-10 | 内置「大鲸鱼」默认人设，安装即有角色；新增 `personaEnabled` 开关 |
 | [0.2.1](https://www.npmjs.com/package/dsh-wx-ilink/v/0.2.1) | 2026-11-10 | `weixin_login` 增加二维码文件兜底（`login-qr.gif`），适配不渲染图片的界面 |
 | [0.2.0](https://www.npmjs.com/package/dsh-wx-ilink/v/0.2.0) | 2026-11-10 | 跨端支持（`webServer` 变可选）、新增 `weixin_login` / `weixin_verify` / `weixin_status` / `weixin_logout` 控制工具、桌面端可用 |
 | [0.1.1](https://www.npmjs.com/package/dsh-wx-ilink/v/0.1.1) | 2026-11-10 | 群聊接入（`off`/`all`/`mention`）、关键错误主动告警、`index.js` 拆分为 13 个模块、测试增至 39 项 |
@@ -293,7 +295,7 @@ npm test
 
 ```bash
 # 固定版本
-dsh plugin --profile web add dsh-wx-ilink@0.2.1
+dsh plugin --profile web add dsh-wx-ilink@0.2.2
 
 # 或跟随最新
 dsh plugin --profile web add dsh-wx-ilink@latest

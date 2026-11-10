@@ -32,10 +32,15 @@
 
 | 组件 | 要求 |
 |---|---|
-| DSH | Web profile，`0.2.1-rc.5` 至 `0.2.x`（`0.3` 未验证） |
+| DSH | **Web 端**（`dsh web`）或 **桌面版**（Windows / macOS），`0.2.1-rc.5` 至 `0.2.x`（`0.3` 未验证） |
 | Node.js | 20.3 或更高 |
 | 微信 | 账号具备 iLink / ClawBot 扫码入口 |
 | 网络 | 能访问 `ilinkai.weixin.qq.com` 与微信 CDN |
+
+- **Web 端**：右上角微信图标抽屉可直接扫码，也可用 `/weixin?token=...` 页面。
+- **桌面版**：同样有右上角入口；若界面不渲染工具返回的二维码图片，用 `weixin_login` 给出的 `qrPath` 打开 `login-qr.gif` 扫码。
+- 桌面版如果 `dsh` 不在 PATH，Windows 下可执行安装包自带的 CLI：
+  `"<DSH 安装目录>\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add dsh-wx-ilink@0.2.2`
 
 不需要公网 IP，也不需要反向代理；iLink 是出站长连接 + 长轮询。
 
@@ -43,23 +48,47 @@
 
 ### 从 npm 安装（推荐）
 
+**Web 端**（profile 通常是 `web`）：
+
 ```bash
 dsh plugin --profile web add dsh-wx-ilink@0.2.2
 ```
 
+**桌面版**（profile 通常是 `desktop`）：
+
+```bash
+dsh plugin --profile desktop add dsh-wx-ilink@0.2.2
+```
+
+> Windows 桌面版若提示 `dsh: command not found`，改用安装包自带 CLI：
+> ```powershell
+> & "D:\DSH\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add dsh-wx-ilink@0.2.2
+> ```
+> 不确定 profile 名时，先看 `~/.dsh/profiles/`（Windows 是 `%USERPROFILE%\.dsh\profiles\`）下的目录。
+
 ### 从 GitHub 安装
 
 ```bash
+# Web 端
 dsh plugin --profile web add github:An-yyds/dsh-wx-ilink#v0.2.2
+
+# 桌面版
+dsh plugin --profile desktop add github:An-yyds/dsh-wx-ilink#v0.2.2
 ```
 
 ### 从本地目录安装
 
 ```bash
+# Web 端
 dsh plugin --profile web add /absolute/path/to/dsh-wx-ilink
+
+# 桌面版
+dsh plugin --profile desktop add /absolute/path/to/dsh-wx-ilink
 ```
 
-安装后**重启一次 DSH**（客户端入口在启动时扫描），然后硬刷新浏览器页面。
+安装后**重启一次 DSH**（客户端入口在启动时扫描）；Web 端再硬刷新浏览器页面，桌面版重启后右上角就会出现微信图标。
+
+桌面版安装时如果遇到 `EPERM`（profiles 目录被占用），按提示提升权限后重跑同一条命令即可。
 
 > 想跟随最新版可以用 `dsh-wx-ilink@latest`；生产环境建议固定版本号，避免自动升级带来行为变化。
 

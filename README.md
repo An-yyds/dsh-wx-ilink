@@ -18,6 +18,8 @@
 - 处理期间“正在输入”，长任务按间隔发进度提示
 - 原生 Web 面板：右上角微信图标（连接状态点）、扫码/验证码、联系人、人设编辑、重新登录/退出
 - 默认白名单：只允许扫码登录的本人微信号使用
+- 群聊接入：可选开启，一个群一个 DSH 会话，支持 `all` / 仅被 @ 两种模式
+- 关键错误告警：登录过期、收消息连续失败、回复发送失败、消息循环崩溃时主动推微信
 
 ## 要求
 
@@ -130,6 +132,14 @@ dsh plugin --profile web add /absolute/path/to/dsh-wx-ilink
 | `allowedUsers` | `[]` | 非空时只允许这些微信 ID；为空时只允许扫码本人 |
 | `allowAllUsers` | `false` | 设为 `true` 才允许任意联系人 |
 | `adminToken` | 自动生成 | 兜底登录页 token；持久化在 state.json |
+| `groups.mode` | `off` | 群聊开关：`off` / `all`（全部群消息）/ `mention`（仅被 @） |
+| `groups.allowedGroups` | `[]` | 允许的群 ID；为空表示全部允许（仍需开启 mode） |
+| `groups.mentionPattern` | 空 | `mention` 模式判断“被 @”的正则；默认只要文本含 `@` 就算 |
+| `groups.allowedMembers` | `[]` | 群内允许的成员 ID；为空表示群内所有成员都可用 |
+| `alerts.enabled` | `true` | 关键错误主动推送微信告警 |
+| `alerts.includeOwner` | `true` | 告警推给扫码登录的主人 |
+| `alerts.toUsers` | `[]` | 额外告警接收人 |
+| `alerts.throttleMs` | `300000` | 同类告警的冷却时间（毫秒） |
 | `botAgent` | `DSH-ILink/0.1.0` | 协议里的 bot_agent，仅用于观测 |
 
 ## 媒体
@@ -155,6 +165,43 @@ dsh plugin --profile web add /absolute/path/to/dsh-wx-ilink
 - 多条审批按联系人排队，一次只问一条
 - `ask_user_question` 会逐题转发；回复编号或直接输入文字
 
+## 群聊
+
+默认关闭。开启后，一个微信群对应一个 DSH 会话；回复发回群里。
+
+```yaml
+- id: weixin-ilink
+  name: dsh-wx-ilink
+  config:
+    groups:
+      mode: mention          # off / all / mention
+      allowedGroups: []      # 空 = 全部群；建议填明确的群 ID
+      mentionPattern: ''     # 留空则“文本含 @”即视为被叫到
+```
+
+- 群消息会以 `[群聊 xxxx · 成员 xxxx] 内容` 的格式交给模型，模型能区分发言人
+- 未授权的群只会回复一次“群 ID + 如何授权”，不会刷屏
+- 群内命令（`/new`、`/status`、`/persona` 等）与单聊一致
+- 会话标题为 `微信群·xxxx`，可在 DSH 侧边栏直接看到
+- `send_weixin_file` 在群里会把文件发到群
+
+**注意**：iLink 群消息的字段行为需要以真实群验证；`mention` 模式默认用“文本里出现 `@`”判断，必要时用 `mentionPattern` 指定机器人昵称。
+
+## 告警
+
+关键错误会主动推送到微信（默认发给扫码登录的主人）：
+
+| 告警类型 | 触发条件 |
+|---|---|
+| `session-expired` | bot_token 失效，需要重新扫码 |
+| `poll-failed` | 连续 3 次拉取消息失败 |
+| `send-failed` | 回复微信失败（重试后仍失败） |
+| `loop-crashed` | 消息循环异常退出 |
+
+- 同类告警在 `alerts.throttleMs`（默认 5 分钟）内只发一次
+- 告警发送失败只写日志，不会递归告警
+- 重新登录成功后自动清空冷却
+
 ## 安全
 
 - 默认只允许扫码登录的微信号；`allowedUsers` 可增加，`allowAllUsers: true` 才会放开所有人
@@ -167,14 +214,24 @@ dsh plugin --profile web add /absolute/path/to/dsh-wx-ilink
 ## 实现
 
 ```
-index.js          Host 插件：路由、登录、长轮询、会话映射、Agent 驱动、审批、提问、人设
-client.js         DSH Web 客户端：右上角图标 + 原生右侧抽屉
-lib/ilink.js      iLink HTTP 协议：登录、getupdates、sendmessage、typing、媒体上传
-lib/media.js      CDN 下载、AES-128-ECB 解密、媒体描述
-lib/state.js      原子状态存储
-lib/qr.js         二维码 SVG
-vendor/qrcode.mjs qrcode-generator 2.0.4（MIT）
-test/             协议/媒体/上传单元测试
+index.js             Host 插件入口：状态、长轮询、消息分发、命令、Agent 驱动
+client.js            DSH Web 客户端：右上角图标 + 原生右侧抽屉
+lib/config.js        配置解析、常量、帮助文本
+lib/text.js          纯文本 / HTTP 小工具
+lib/ilink.js         iLink HTTP 协议：登录、getupdates、sendmessage、typing、媒体上传
+lib/media.js         CDN 下载、AES-128-ECB 解密、媒体描述
+lib/login.js         扫码登录状态机
+lib/panel.js         本机登录页与兜底路由
+lib/approval.js      工具审批 → 微信 1/2（排队）
+lib/questions.js     ask_user_question → 微信逐题问答
+lib/attachments.js   媒体 → DSH 内容块
+lib/typing.js        “正在输入”与进度提示
+lib/peers.js         单聊 / 群聊主体解析与群策略
+lib/alerts.js        关键错误主动告警
+lib/state.js         原子状态存储
+lib/qr.js            二维码 SVG
+vendor/qrcode.mjs    qrcode-generator 2.0.4（MIT）
+test/                协议 / 媒体 / 上传 / 群聊 / 告警单元测试
 ```
 
 协议细节：`get_bot_qrcode` → `get_qrcode_status` → `getupdates` 长轮询 → `sendmessage`；媒体走 `getuploadurl` + CDN。
@@ -189,7 +246,6 @@ npm test
 
 ## 已知限制
 
-- 只处理单聊，群聊消息忽略
 - 不支持发语音；收到语音只用转写文字
 - 引用消息、名片、小程序未解析
 - 图片理解取决于模型；文本模型只能拿到文件附件

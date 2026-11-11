@@ -32,6 +32,10 @@ function makePlugin(overrides = {}) {
     },
     log: () => {},
     pageUrl: () => 'http://127.0.0.1:3080/weixin?token=x',
+    peerOfSession: () => 'owner@im.wechat',
+    stickers: {
+      send: async (peer, mood) => ({ mood: mood || 'happy', label: '开心', bytes: 2837 }),
+    },
     statusPayload: () => ({
       ok: true,
       state: 'connected',
@@ -61,7 +65,7 @@ function makePlugin(overrides = {}) {
 test('注册四个控制工具', () => {
   const { plugin, tools } = makePlugin();
   new ControlTools(plugin).register();
-  assert.deepEqual([...tools.keys()].sort(), ['weixin_login', 'weixin_logout', 'weixin_status', 'weixin_verify']);
+  assert.deepEqual([...tools.keys()].sort(), ['weixin_login', 'weixin_logout', 'weixin_status', 'weixin_sticker', 'weixin_verify']);
 });
 
 test('weixin_status 只返回 schema 声明的字段', async () => {

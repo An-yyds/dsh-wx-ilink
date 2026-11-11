@@ -4,7 +4,7 @@
 [![CI](https://github.com/An-yyds/dsh-wx-ilink/actions/workflows/ci.yml/badge.svg)](https://github.com/An-yyds/dsh-wx-ilink/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/dsh-wx-ilink)](LICENSE)
 
-当前版本：**0.2.3** · [更新记录](#版本更新) · [CHANGELOG](CHANGELOG.md)
+当前版本：**0.3.0** · [更新记录](#版本更新) · [CHANGELOG](CHANGELOG.md)
 
 把 **个人微信** 接入 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的独立插件：手机微信扫码登录后，微信消息进入独立的 DSH 会话；Agent 处理完，把结果发回微信。
 
@@ -27,6 +27,7 @@
 - 群聊接入：可选开启，一个群一个 DSH 会话，支持 `all` / 仅被 @ 两种模式
 - 关键错误告警：登录过期、收消息连续失败、回复发送失败、消息循环崩溃时主动推微信
 - 跨端：不依赖 `webServer`，桌面端等没有本地 HTTP 服务的宿主也能用工具完成登录与状态查看
+- 表情包：内置 8 张自绘表情，按 Noisy-OR 概率模型决定是否附带，可调可复现
 
 ## 要求
 
@@ -40,7 +41,7 @@
 - **Web 端**：右上角微信图标抽屉可直接扫码，也可用 `/weixin?token=...` 页面。
 - **桌面版**：同样有右上角入口；若界面不渲染工具返回的二维码图片，用 `weixin_login` 给出的 `qrPath` 打开 `login-qr.gif` 扫码。
 - 桌面版如果 `dsh` 不在 PATH，Windows 下可执行安装包自带的 CLI：
-  `"<DSH 安装目录>\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add dsh-wx-ilink@0.2.3`
+  `"<DSH 安装目录>\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add dsh-wx-ilink@0.3.0`
 
 不需要公网 IP，也不需要反向代理；iLink 是出站长连接 + 长轮询。
 
@@ -51,18 +52,18 @@
 **Web 端**（profile 通常是 `web`）：
 
 ```bash
-dsh plugin --profile web add dsh-wx-ilink@0.2.3
+dsh plugin --profile web add dsh-wx-ilink@0.3.0
 ```
 
 **桌面版**（profile 通常是 `desktop`）：
 
 ```bash
-dsh plugin --profile desktop add dsh-wx-ilink@0.2.3
+dsh plugin --profile desktop add dsh-wx-ilink@0.3.0
 ```
 
 > Windows 桌面版若提示 `dsh: command not found`，改用安装包自带 CLI：
 > ```powershell
-> & "D:\DSH\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add dsh-wx-ilink@0.2.3
+> & "D:\DSH\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add dsh-wx-ilink@0.3.0
 > ```
 > 不确定 profile 名时，先看 `~/.dsh/profiles/`（Windows 是 `%USERPROFILE%\.dsh\profiles\`）下的目录。
 
@@ -70,10 +71,10 @@ dsh plugin --profile desktop add dsh-wx-ilink@0.2.3
 
 ```bash
 # Web 端
-dsh plugin --profile web add github:An-yyds/dsh-wx-ilink#v0.2.3
+dsh plugin --profile web add github:An-yyds/dsh-wx-ilink#v0.3.0
 
 # 桌面版
-dsh plugin --profile desktop add github:An-yyds/dsh-wx-ilink#v0.2.3
+dsh plugin --profile desktop add github:An-yyds/dsh-wx-ilink#v0.3.0
 ```
 
 ### 从本地目录安装
@@ -217,6 +218,73 @@ dsh plugin --profile desktop add /absolute/path/to/dsh-wx-ilink
 
 工具在 Web 端同样可用，作为面板之外的备用入口。
 
+## 表情包
+
+插件内置 8 张自绘鲸鱼表情，会在回复后**自动评估**是否附带一张：
+
+| 情绪 | 触发场景 |
+|---|---|
+| `happy` 开心 | 好消息、轻松语气 |
+| `thumbsUp` 点赞 | 认可、通过 |
+| `thinking` 思考 | 正在分析 |
+| `sad` 难过 | 遗憾、没找到 |
+| `celebrate` 庆祝 | 完成、成功、全部通过 |
+| `oops` 抱歉 | 出错、失败、超时 |
+| `cheer` 加油 | 鼓励、继续 |
+| `question` 疑问 | 需要确认 |
+
+### 决策模型
+
+不是每次都发，也不是永不发。用 Noisy-OR 把多个特征合成一次触发概率：
+
+```
+p_i    = pMax_i · e_i                     # 每个特征单独触发概率
+P_raw  = 1 − (1 − p₀) · Π (1 − p_i)       # Noisy-OR 合成
+P      = clamp(P_raw · s, pMin, pMax)     # s 为抑制因子（已带图片时 0.3）
+```
+
+特征与归一化：
+
+| 特征 | 归一化 | 方向 |
+|---|---|---|
+| 回复长度 | `1 − e^(−len/L₀)` | 越长越支持 |
+| 回复耗时 | `1 − e^(−ms/T₀)` | 越长越支持 |
+| 情绪强度 | 规则打分 0~1 | 越强越支持 |
+| 对话轮次 | `1 − e^(−turn/N)` | 避免刚开场就触发 |
+| 带文件 / 带文档 | 0/1 | 轻度支持 |
+| **已带图片** | 0/1 | **抑制**（因子 0.3） |
+
+三层后处理，避免高概率时连续触发：
+
+1. **冷却**：触发后 `cooldownMs` 内不再触发
+2. **连续惩罚**：最近 `k` 次已触发 `m` 次 → `P ×= α^m`（默认 α=0.7）
+3. **全局频率**：最近 20 条回复触发率超过 15% → 按比例压低
+
+随后生成 `r ∈ [0,1)`，`r < P` 才发送。随机源可注入、种子可配置，**同输入同种子结果完全可复现**，决策日志会打印 `P`、`r`、是否发送与情绪标签。
+
+### 显式发表情
+
+用户说“发个表情”时，模型调用 `weixin_sticker`，跳过错率直接发送（仍受开关与冷却约束）。
+
+### 配置
+
+```yaml
+stickers:
+  enabled: true
+  cooldownMs: 120000     # 触发后冷却
+  baseline: 0.03         # 基线概率 p₀
+  pMin: 0.01
+  pMax: 0.9
+  suppressionImage: 0.3  # 已带图片时的抑制因子
+  seed: 0                # 0 = 每次进程启动随机
+```
+
+### 说明
+
+- 微信没有贴纸类型，表情以**图片消息**发送（观感接近，但不能“添加到表情”）。
+- 图片字节只在发送时读取上传，**模型全程看不到图片内容**，工具只返回 mood / 文件名 / 字节数。
+- 素材为本项目自绘，MIT 授权；重新生成用 `node scripts/build-stickers.mjs <sharp 路径>`。
+
 ## 群聊
 
 默认关闭。开启后，一个微信群对应一个 DSH 会话；回复发回群里。
@@ -314,6 +382,7 @@ npm test
 
 | 版本 | 日期 | 主要内容 |
 |---|---|---|
+| [0.3.0](https://www.npmjs.com/package/dsh-wx-ilink/v/0.3.0) | 2026-11-11 | 内置表情包图库（8 张自绘）、Noisy-OR 发送决策、`weixin_sticker` 工具 |
 | [0.2.3](https://www.npmjs.com/package/dsh-wx-ilink/v/0.2.3) | 2026-11-10 | 修复面板「重新登录」返回 HTTP 400；路由异常改为 500 并记录日志 |
 | [0.2.2](https://www.npmjs.com/package/dsh-wx-ilink/v/0.2.2) | 2026-11-10 | 内置「大鲸鱼」默认人设，安装即有角色；新增 `personaEnabled` 开关 |
 | [0.2.1](https://www.npmjs.com/package/dsh-wx-ilink/v/0.2.1) | 2026-11-10 | `weixin_login` 增加二维码文件兜底（`login-qr.gif`），适配不渲染图片的界面 |
@@ -325,7 +394,7 @@ npm test
 
 ```bash
 # 固定版本
-dsh plugin --profile web add dsh-wx-ilink@0.2.3
+dsh plugin --profile web add dsh-wx-ilink@0.3.0
 
 # 或跟随最新
 dsh plugin --profile web add dsh-wx-ilink@latest

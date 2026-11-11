@@ -1,0 +1,78 @@
+{
+  "happy": {
+    "file": "happy.png",
+    "label": "开心",
+    "keywords": [
+      "开心",
+      "高兴",
+      "哈哈",
+      "好耶"
+    ]
+  },
+  "thumbsUp": {
+    "file": "thumbs-up.png",
+    "label": "点赞",
+    "keywords": [
+      "赞",
+      "不错",
+      "可以",
+      "支持"
+    ]
+  },
+  "thinking": {
+    "file": "thinking.png",
+    "label": "思考",
+    "keywords": [
+      "想想",
+      "分析",
+      "让我看看"
+    ]
+  },
+  "sad": {
+    "file": "sad.png",
+    "label": "难过",
+    "keywords": [
+      "可惜",
+      "遗憾",
+      "没找到"
+    ]
+  },
+  "celebrate": {
+    "file": "celebrate.png",
+    "label": "庆祝",
+    "keywords": [
+      "完成",
+      "成功",
+      "搞定",
+      "通过"
+    ]
+  },
+  "oops": {
+    "file": "oops.png",
+    "label": "抱歉",
+    "keywords": [
+      "抱歉",
+      "出错",
+      "失败",
+      "超时"
+    ]
+  },
+  "cheer": {
+    "file": "cheer.png",
+    "label": "加油",
+    "keywords": [
+      "加油",
+      "继续",
+      "努力"
+    ]
+  },
+  "question": {
+    "file": "question.png",
+    "label": "疑问",
+    "keywords": [
+      "疑问",
+      "不确定",
+      "确认"
+    ]
+  }
+}

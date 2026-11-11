@@ -54,6 +54,13 @@ import { TypingCenter } from './lib/typing.js';
 import { PeerRouter, isGroupKey } from './lib/peers.js';
 import { AlertCenter } from './lib/alerts.js';
 import { ControlTools } from './lib/control.js';
+import { StickerLibrary } from './lib/stickers.js';
+import {
+  DEFAULT_DECISION,
+  decideSticker,
+  readEmotion,
+  recordDecision,
+} from './lib/sticker-decision.js';
 import {
   HELP_TEXT,
   LOGIN_PAGE,
@@ -107,6 +114,13 @@ export class WeixinIlinkPlugin {
     this.peers = new PeerRouter(this);
     this.alerts = new AlertCenter(this);
     this.control = new ControlTools(this);
+    this.stickers = new StickerLibrary(this);
+    /** 每个会话主体的决策状态（冷却时间 + 触发历史）。 */
+    this.stickerState = new Map();
+    /** 每个会话主体已进行的轮次，供 e_turn 使用。 */
+    this.turnCount = new Map();
+    /** 本轮已发送的媒体数量，用于判断 e_file / e_img。 */
+    this.turnMedia = new Map();
   }
 
   get agents() {
@@ -293,6 +307,7 @@ export class WeixinIlinkPlugin {
       questions: this.questions.size,
       groups: this.config.groups.mode,
       alerts: this.config.alerts.enabled,
+      stickers: this.config.stickers.enabled ? this.stickers.size : 0,
       hasCursor: Boolean(this.state?.cursor),
       cwd: this.cwd,
     };
@@ -721,6 +736,7 @@ export class WeixinIlinkPlugin {
           '需要用户授权时，DSH 会把审批请求发到微信，用户可用 1/2 回复；你只需正常调用工具。',
           '需要把图片、视频或文件发给用户时，先写到会话工作目录，再调用 send_weixin_file 工具。',
           inGroup ? '群里回复要简短，避免输出大段代码或日志。' : '回复要简洁，避免大段 Markdown。',
+          '系统可能会在你回复后自动附上一张表情图，你不需要在正文里提及它；用户明确要求发表情时用 weixin_sticker。',
         ].join('\n'),
       });
     } catch (error) {
@@ -784,6 +800,60 @@ export class WeixinIlinkPlugin {
       });
     } catch (error) {
       this.log('warn', `注册 send_weixin_file 失败：${error?.message ?? error}`);
+    }
+  }
+
+  /** 把配置里的 stickers 段合成为决策参数。 */
+  decisionConfig() {
+    const config = this.config.stickers;
+    return {
+      ...DEFAULT_DECISION,
+      baseline: config.baseline,
+      pMin: config.pMin,
+      pMax: config.pMax,
+      cooldownMs: config.cooldownMs,
+      seed: config.seed,
+      suppression: { ...DEFAULT_DECISION.suppression, image: config.suppressionImage },
+    };
+  }
+
+  /**
+   * 一轮结束后决定是否附带表情。
+   * 随机源与参数都可复现：同 seed、同输入、同历史得到同一结果。
+   */
+  async maybeSendSticker(peer, { text, durationMs, hasFile, hasDoc, hasImage, contextToken, signal } = {}) {
+    const config = this.config.stickers;
+    if (!config.enabled) return undefined;
+    if (this.stickers.size === 0) return undefined;
+
+    const turn = (this.turnCount.get(peer) ?? 0) + 1;
+    this.turnCount.set(peer, turn);
+
+    const emotion = readEmotion(text);
+    const state = this.stickerState.get(peer) ?? {};
+    const decision = this.decisionConfig();
+    const result = decideSticker({
+      input: {
+        replyLength: String(text ?? '').length,
+        durationMs: Number(durationMs) || 0,
+        emotionIntensity: emotion.intensity,
+        turn,
+        hasFile: Boolean(hasFile),
+        hasDoc: Boolean(hasDoc),
+        hasImage: Boolean(hasImage),
+      },
+      state,
+      decision,
+    });
+    this.stickerState.set(peer, recordDecision(state, result));
+    this.log('info', `表情决策 P=${result.probability.toFixed(3)} r=${result.roll.toFixed(3)} 发送=${result.send}（${emotion.mood}）`);
+    if (!result.send) return { ...result, mood: emotion.mood, sent: undefined };
+    try {
+      const sent = await this.stickers.send(peer, emotion.mood, { contextToken, signal, text });
+      return { ...result, mood: emotion.mood, sent };
+    } catch (error) {
+      this.log('warn', `表情发送失败：${error?.message ?? error}`);
+      return { ...result, mood: emotion.mood, sent: undefined };
     }
   }
 
@@ -855,6 +925,7 @@ export class WeixinIlinkPlugin {
       botAgent: this.config.botAgent,
       signal,
     });
+    this.turnMedia.set(peer, (this.turnMedia.get(peer) ?? 0) + 1);
     this.log('info', `已向 ${this.peers.label(peer)} 发送${kind === 'image' ? '图片' : kind === 'video' ? '视频' : '文件'}：${path.basename(real)}（${data.length} 字节）`);
     return { path: real, name: path.basename(real), kind, bytes: data.length };
   }
@@ -1006,6 +1077,8 @@ export class WeixinIlinkPlugin {
 
     const stopProgress = this.typing.progress(peer, contextToken);
     this.typing.start(peer, contextToken);
+    const startedAt = Date.now();
+    this.turnMedia.set(peer, 0);
     try {
       const firstSeq = agent.session.seq;
       try {
@@ -1026,7 +1099,21 @@ export class WeixinIlinkPlugin {
       const body = answer.trim() || reasonText(reason) || '（这一轮没有产生文字回复）';
       stopProgress();
       await this.reply(peer, body, contextToken);
+
+      const sentMedia = this.turnMedia.get(peer) ?? 0;
+      try {
+        await this.maybeSendSticker(peer, {
+          text: body,
+          durationMs: Date.now() - startedAt,
+          hasFile: sentMedia > 0 || mediaRefs.length > 0,
+          hasImage: built.parts.some((part) => part.type === 'image'),
+          contextToken,
+        });
+      } catch (error) {
+        this.log('warn', `表情决策异常：${error?.message ?? error}`);
+      }
     } finally {
+      this.turnMedia.delete(peer);
       stopProgress();
       this.typing.stop(peer);
       try {

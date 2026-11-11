@@ -1,6 +1,6 @@
 {
   "name": "dsh-wx-ilink",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "DeepSeek Harness 的微信 iLink 通道：扫码登录、独立会话、媒体收发、审批与提问转发、人设和原生 Web 面板。",
   "type": "module",
   "main": "./index.js",

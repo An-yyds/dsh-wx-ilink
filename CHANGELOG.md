@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.1 — 2026-11-11
+
+### 新增
+
+- **自定义表情图库**：把图片放进 `$DSH_HOME/weixin-ilink/stickers/` 即可，文件名即情绪名，支持 png/jpg/jpeg/gif/webp。
+- `stickers.dir` 指定自定义目录（支持 `~`），`stickers.includeBuiltin: false` 只用自有图库。
+- 可选 `index.json` 补充中文标签与关键词，参与情绪匹配兜底。
+- 同名情绪时用户图**覆盖**内置图，日志提示覆盖了哪些。
+- `weixin_status` 返回 `stickers`（数量）与 `stickerMoods`（可用情绪列表），便于确认自定义图库生效。
+
+### 测试
+
+- 图库测试扩充到 10 项（覆盖合并、覆盖、index、includeBuiltin、reload、大小上限），总数 80 项。
+
 ## 0.3.0 — 2026-11-11
 
 ### 新增

@@ -308,6 +308,7 @@ export class WeixinIlinkPlugin {
       groups: this.config.groups.mode,
       alerts: this.config.alerts.enabled,
       stickers: this.config.stickers.enabled ? this.stickers.size : 0,
+      stickerMoods: this.config.stickers.enabled ? this.stickers.moods() : [],
       hasCursor: Boolean(this.state?.cursor),
       cwd: this.cwd,
     };

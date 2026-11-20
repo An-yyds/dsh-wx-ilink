@@ -149,11 +149,11 @@ test('r < P 才发送', () => {
 });
 
 test('readEmotion 识别情绪并给出强度', () => {
-  assert.equal(readEmotion('搞定了，全部通过！').mood, 'celebrate');
-  assert.equal(readEmotion('抱歉，这次失败了').mood, 'oops');
+  assert.equal(readEmotion('搞定了，全部通过！').mood, 'happy');
+  assert.equal(readEmotion('抱歉，这次失败了').mood, 'nervous');
+  assert.equal(readEmotion('有点紧张，心跳加快').mood, 'nervous');
   assert.equal(readEmotion('让我看看这个文件').mood, 'thinking');
   assert.equal(readEmotion('哈哈，好开心😄').mood, 'happy');
-  assert.equal(readEmotion('太好了，搞定！').mood, 'celebrate');
   assert.ok(readEmotion('搞定了！！！').intensity > readEmotion('搞定了').intensity);
   assert.equal(readEmotion('').mood, 'happy');
   assert.equal(readEmotion('').intensity, 0);

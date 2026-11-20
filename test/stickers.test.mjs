@@ -40,10 +40,10 @@ function makeUserDir(plugin, files = {}) {
   return dir;
 }
 
-test('内置图库可加载', () => {
+test('内置图库可加载（3 张：happy / thinking / nervous）', () => {
   const library = new StickerLibrary(fakePlugin());
-  assert.ok(library.size >= 8);
-  assert.ok(library.moods().includes('happy'));
+  assert.equal(library.size, 3);
+  assert.deepEqual(library.moods().sort(), ['happy', 'nervous', 'thinking']);
 });
 
 test('用户目录按文件名加入新情绪', () => {

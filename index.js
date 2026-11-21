@@ -79,6 +79,24 @@ import {
 } from './lib/text.js';
 import { MediaTooLargeError } from './lib/media.js';
 
+/** 每个会话主体最多保留多少个归档会话。 */
+const SESSION_HISTORY_LIMIT = 20;
+
+/** 会话 ID 的短形式，用于在微信里显示。 */
+function shortSessionId(id) {
+  const bare = String(id ?? '').replace(/^session-/, '');
+  return bare ? bare.slice(0, 8) : '未知';
+}
+
+/** 归档时间的人类可读形式。 */
+function formatSessionTime(at) {
+  const value = Number(at);
+  if (!Number.isFinite(value) || value <= 0) return '时间未知';
+  const date = new Date(value);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export const name = 'dsh-wx-ilink';
 export const inject = ['agents', 'sessions', 'tools'];
 
@@ -121,6 +139,8 @@ export class WeixinIlinkPlugin {
     this.turnCount = new Map();
     /** 本轮已发送的媒体数量，用于判断 e_file / e_img。 */
     this.turnMedia = new Map();
+    /** 每个会话主体最近一条用户文字，用来给归档的会话生成摘要。 */
+    this.lastTexts = new Map();
   }
 
   get agents() {
@@ -485,6 +505,7 @@ export class WeixinIlinkPlugin {
     }
 
     this.lastSeen.set(peer.key, Date.now());
+    if (trimmed) this.lastTexts.set(peer.key, trimmed.slice(0, 60));
     if (message.context_token) {
       this.state.contextTokens[peer.key] = message.context_token;
       this.store.save();
@@ -542,6 +563,15 @@ export class WeixinIlinkPlugin {
     }
     if (trimmed === '/new') {
       this.enqueue(peer.key, () => this.newChat(peer.key, token));
+      return;
+    }
+    if (trimmed === '/list') {
+      this.enqueue(peer.key, () => this.listSessions(peer.key, token));
+      return;
+    }
+    if (trimmed === '/switch' || trimmed.startsWith('/switch ')) {
+      const target = trimmed.slice('/switch'.length).trim();
+      this.enqueue(peer.key, () => this.switchSession(peer.key, target, token));
       return;
     }
     if (trimmed === '/ping') {
@@ -602,14 +632,122 @@ export class WeixinIlinkPlugin {
     await this.reply(peer, `人设已更新，下一条消息生效：\n${this.state.personas[peer]}`, token);
   }
 
-  async newChat(peer, token) {
-    if (this.state.sessionMap[peer]) {
-      delete this.state.sessionMap[peer];
-      this.store.save();
-      await this.reply(peer, '已开始新会话。旧会话保留在 DSH 里，下一条消息进入全新的上下文。', token);
+  /** 把会话归档进 sessionHistory，供 /list 找回。 */
+  archiveSession(peer, sessionId) {
+    if (!sessionId) return;
+    const previous = Array.isArray(this.state.sessionHistory?.[peer]) ? this.state.sessionHistory[peer] : [];
+    const entry = { id: sessionId, at: Date.now(), preview: this.lastTexts.get(peer) ?? '' };
+    const next = [entry, ...previous.filter((item) => item?.id !== sessionId)];
+    this.state.sessionHistory = {
+      ...(this.state.sessionHistory ?? {}),
+      [peer]: next.slice(0, SESSION_HISTORY_LIMIT),
+    };
+  }
+
+  /** 让某个会话的 handle 优雅退场；还在跑就跳过，避免打断任务。 */
+  async releaseHandleIfIdle(sessionId) {
+    if (!sessionId) return;
+    const handle = this.handles.get(sessionId);
+    if (!handle) return;
+    const agent = handle.agent ?? this.agents.get?.(sessionId);
+    if (agent?.status === 'running') {
+      this.log('info', `会话 ${sessionId} 仍在运行，保留 handle`);
       return;
     }
-    await this.reply(peer, '还没有旧会话，直接发消息就会创建新会话。', token);
+    this.handles.delete(sessionId);
+    try {
+      await handle?.dispose?.();
+    } catch (error) {
+      this.log('warn', `释放会话 ${sessionId} 失败：${error?.message ?? error}`);
+    }
+  }
+
+  async newChat(peer, token) {
+    const current = this.state.sessionMap[peer];
+    if (!current) {
+      await this.reply(peer, '还没有旧会话，直接发消息就会创建新会话。', token);
+      return;
+    }
+    this.archiveSession(peer, current);
+    delete this.state.sessionMap[peer];
+    this.store.save();
+    await this.releaseHandleIfIdle(current);
+    const total = this.state.sessionHistory?.[peer]?.length ?? 0;
+    await this.reply(peer, `已开始新会话。旧会话已归档，可用 /list 查看（共 ${total} 条）。`, token);
+  }
+
+  async listSessions(peer, token) {
+    const current = this.state.sessionMap[peer];
+    const history = Array.isArray(this.state.sessionHistory?.[peer]) ? this.state.sessionHistory[peer] : [];
+    const lines = [`会话列表 · ${this.peers.label(peer)}`];
+    if (current) {
+      const preview = this.lastTexts.get(peer);
+      lines.push(`当前：#${shortSessionId(current)}${preview ? ` · ${preview}` : ''}`);
+    } else {
+      lines.push('当前：还没有会话（下一条消息会新建）');
+    }
+    if (!history.length) {
+      lines.push('没有归档会话。发 /new 会把当前会话归档到这里。');
+    } else {
+      history.forEach((item, index) => {
+        const when = formatSessionTime(item?.at);
+        const preview = item?.preview ? ` · ${item.preview}` : '';
+        lines.push(`${index + 1}. ${when} · #${shortSessionId(item?.id)}${preview}`);
+      });
+    }
+    lines.push('', '发 /switch <序号> 切回某个会话（也可以直接发完整会话 ID）。');
+    await this.reply(peer, lines.join('\n'), token);
+  }
+
+  /** 把 /switch 的参数解析成会话 ID：序号、完整 ID 都接受。 */
+  resolveSwitchTarget(peer, arg) {
+    const history = Array.isArray(this.state.sessionHistory?.[peer]) ? this.state.sessionHistory[peer] : [];
+    const text = String(arg ?? '').trim();
+    if (!text) return undefined;
+    if (/^\d+$/.test(text)) {
+      const index = Number(text) - 1;
+      return history[index]?.id;
+    }
+    if (history.some((item) => item?.id === text)) return text;
+    if (/^session-[0-9a-f-]{8,}$/i.test(text)) return text;
+    return undefined;
+  }
+
+  async switchSession(peer, arg, token) {
+    if (!arg) {
+      await this.reply(peer, '用法：/switch <序号> 或 /switch <会话 ID>；先发 /list 看序号。', token);
+      return;
+    }
+    const target = this.resolveSwitchTarget(peer, arg);
+    if (!target) {
+      await this.reply(peer, `找不到「${arg}」对应的会话，先发 /list 看看。`, token);
+      return;
+    }
+    const current = this.state.sessionMap[peer];
+    if (current === target) {
+      await this.reply(peer, '已经在这个会话里了。', token);
+      return;
+    }
+    const running = current ? this.agents.get?.(current) : undefined;
+    if (running?.status === 'running') {
+      await this.reply(peer, '当前会话还在执行任务，先 /stop 再切换。', token);
+      return;
+    }
+    // 先接上目标会话，接不上就不动映射，保持原样。
+    try {
+      await this.resumeAgent(target, peer);
+    } catch (error) {
+      await this.reply(peer, `切换失败：${error?.message ?? error}`, token);
+      return;
+    }
+    if (current) this.archiveSession(peer, current);
+    const rest = (this.state.sessionHistory?.[peer] ?? []).filter((item) => item?.id !== target);
+    this.state.sessionHistory = { ...(this.state.sessionHistory ?? {}), [peer]: rest };
+    this.state.sessionMap[peer] = target;
+    this.store.save();
+    await this.releaseHandleIfIdle(current);
+    this.log('info', `为 ${this.peers.label(peer)} 切换到会话 ${target}`);
+    await this.reply(peer, `已切换 #${shortSessionId(target)}，下一条消息进入这个会话。`, token);
   }
 
   async stopCurrent(peer, token) {
